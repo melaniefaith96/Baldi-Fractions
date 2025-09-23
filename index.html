@@ -26,9 +26,36 @@ header {display:flex;justify-content:space-between;padding:10px;}
     border:2px solid #444;
     border-radius:8px;
 }
-#door {position:absolute;bottom:0;right:10px;width:80px;transition:transform 1s;}
-#player {position:absolute;bottom:0;left:10px;width:60px;transition:left 1s;}
-#monster {position:absolute;bottom:0;left:-60px;width:60px;transition:left 1s;}
+#door {
+    position:absolute;
+    bottom:0;
+    right:50px;
+    width:60px;
+    height:100px;
+    background:brown;
+    border:3px solid #663300;
+    transition:transform 0.5s;
+}
+#player {
+    position:absolute;
+    bottom:0;
+    left:10px;
+    width:40px;
+    height:60px;
+    background:blue;
+    border-radius:10px;
+    transition:left 0.5s;
+}
+#monster {
+    position:absolute;
+    bottom:0;
+    left:-50px;
+    width:40px;
+    height:60px;
+    background:red;
+    border-radius:10px;
+    transition:left 1s;
+}
 .fraction-box {background:rgba(255,255,255,0.05);padding:10px;border-radius:8px;margin-bottom:10px;}
 #fractionPrompt {font-size:2rem;text-align:center;margin-bottom:10px;}
 input {width:80px;padding:5px;margin-right:10px;}
@@ -48,9 +75,9 @@ button {padding:5px 10px;cursor:pointer;}
 
     <main>
         <div class="scene">
-            <img id="door" src="assets/door-closed.png" alt="door">
-            <img id="player" src="assets/player.png" alt="player">
-            <img id="monster" src="assets/monster.png" alt="monster">
+            <div id="door"></div>
+            <div id="player"></div>
+            <div id="monster"></div>
         </div>
 
         <div class="fraction-box">
@@ -62,13 +89,8 @@ button {padding:5px 10px;cursor:pointer;}
 
         <div class="controls">
             <button id="startBtn">Start Game</button>
-            <button id="muteBtn">Mute</button>
         </div>
     </main>
-
-    <audio id="bgMusic" loop>
-        <source src="assets/spooky.mp3" type="audio/mpeg">
-    </audio>
 </div>
 
 <script>
@@ -76,14 +98,12 @@ const fractionPrompt = document.getElementById('fractionPrompt');
 const answerInput = document.getElementById('answerInput');
 const submitBtn = document.getElementById('submitBtn');
 const startBtn = document.getElementById('startBtn');
-const muteBtn = document.getElementById('muteBtn');
 const message = document.getElementById('message');
 const timeEl = document.getElementById('time');
 const scoreEl = document.getElementById('score');
 const player = document.getElementById('player');
 const door = document.getElementById('door');
 const monster = document.getElementById('monster');
-const bgMusic = document.getElementById('bgMusic');
 
 let currentFraction = {n:0,d:1};
 let reducedFraction = {n:0,d:1};
@@ -92,13 +112,11 @@ let timeLeft = 20;
 let score = 0;
 let playing = false;
 
-// Utilities
 function gcd(a,b){return b===0?a:gcd(b,a%b);}
 function reduceFraction(n,d){const g=gcd(n,d); return {n:n/g,d:d/g};}
 
-// Random 4th-grade level fraction
 function randomFraction(){
-    const n=Math.floor(Math.random()*19)+2; 
+    const n=Math.floor(Math.random()*19)+2;
     const d=Math.floor(Math.random()*19)+2;
     return {n,d};
 }
@@ -112,7 +130,7 @@ function startTimer(){
     timer=setInterval(()=>{
         timeLeft--;
         timeEl.textContent=timeLeft;
-        monster.style.left=`${-60 + (1-(timeLeft/20))*300}px`;
+        monster.style.left=`${-50 + (1-(timeLeft/20))*300}px`;
         if(timeLeft<=0){
             clearInterval(timer);
             playing=false;
@@ -129,7 +147,7 @@ function newRound(){
     timeLeft=20;
     timeEl.textContent=timeLeft;
     player.style.left='10px';
-    monster.style.left='-60px';
+    monster.style.left='-50px';
     door.classList.remove('door-open');
     startTimer();
 }
@@ -144,7 +162,7 @@ submitBtn.addEventListener('click',()=>{
         scoreEl.textContent=score;
         player.style.left='200px';
         clearInterval(timer);
-        setTimeout(()=>{if(playing)newRound();},1000);
+        setTimeout(()=>{if(playing)newRound();},800);
     }else{
         message.textContent=`Wrong! Try again.`;
         timeLeft=Math.max(0,timeLeft-3);
@@ -156,14 +174,9 @@ startBtn.addEventListener('click',()=>{
     playing=true;
     score=0;
     scoreEl.textContent=score;
-    try{bgMusic.currentTime=0;bgMusic.play();}catch(e){}
     newRound();
-});
-
-muteBtn.addEventListener('click',()=>{
-    bgMusic.muted=!bgMusic.muted;
-    muteBtn.textContent=bgMusic.muted?'Unmute':'Mute';
 });
 </script>
 </body>
 </html>
+
