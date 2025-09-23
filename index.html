@@ -1,65 +1,169 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Reduce & Run — Basement Escape</title>
-  <link rel="stylesheet" href="style.css" />
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fraction Run</title>
+<style>
+body {
+    margin:0;
+    font-family:sans-serif;
+    background:#111;
+    color:#eee;
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    height:100vh;
+}
+#game {width:90%;max-width:800px;}
+header {display:flex;justify-content:space-between;padding:10px;}
+.scene {
+    position:relative;
+    background:#000;
+    height:300px;
+    margin:10px 0;
+    overflow:hidden;
+    border:2px solid #444;
+    border-radius:8px;
+}
+#door {position:absolute;bottom:0;right:10px;width:80px;transition:transform 1s;}
+#player {position:absolute;bottom:0;left:10px;width:60px;transition:left 1s;}
+#monster {position:absolute;bottom:0;left:-60px;width:60px;transition:left 1s;}
+.fraction-box {background:rgba(255,255,255,0.05);padding:10px;border-radius:8px;margin-bottom:10px;}
+#fractionPrompt {font-size:2rem;text-align:center;margin-bottom:10px;}
+input {width:80px;padding:5px;margin-right:10px;}
+button {padding:5px 10px;cursor:pointer;}
+#message {margin-top:8px;text-align:center;color:#ff6b6b;}
+.controls {margin-top:10px;display:flex;gap:10px;justify-content:center;}
+.door-open{transform:translateY(-10px);}
+</style>
 </head>
 <body>
-  <div id="game">
+<div id="game">
     <header>
-      <h1>Reduce & Run</h1>
-      <div class="hud">
-        <div id="timer">Time: <span id="time">30</span>s</div>
+        <h1>Fraction Run</h1>
+        <div id="timer">Time: <span id="time">20</span>s</div>
         <div id="score">Score: 0</div>
-      </div>
     </header>
 
     <main>
-      <div class="left-panel">
         <div class="scene">
-          <img id="door" src="assets/door-closed.png" alt="door" />
-          <img id="teacher" src="assets/teacher.png" alt="teacher monster" />
-          <div id="player-flash"></div>
-        </div>
-      </div>
-
-      <div class="right-panel">
-        <div class="description">
-          <p class="blurb">A teacher-monster is chasing you in a dark basement. Reduce the fraction correctly before the time runs out and the door opens — hurry!</p>
+            <img id="door" src="assets/door-closed.png" alt="door">
+            <img id="player" src="assets/player.png" alt="player">
+            <img id="monster" src="assets/monster.png" alt="monster">
         </div>
 
-        <div class="fraction-box" aria-live="polite">
-          <div id="fractionPrompt" class="fractionPrompt"> ? / ? </div>
-
-          <div class="input-row">
-            <input id="numInput" inputmode="numeric" pattern="[0-9]*" type="text" placeholder="numerator" />
-            <span class="slash">/</span>
-            <input id="denInput" inputmode="numeric" pattern="[0-9]*" type="text" placeholder="denominator" />
-          </div>
-
-          <div class="controls">
+        <div class="fraction-box">
+            <div id="fractionPrompt"> ? / ? = ?</div>
+            <input id="answerInput" type="number" placeholder="Reduced numerator">
             <button id="submitBtn">Submit</button>
-            <button id="skipBtn">Skip (-5s)</button>
-            <button id="hintBtn">Hint (-3s)</button>
-          </div>
-
-          <div id="message" class="message"></div>
+            <div id="message"></div>
         </div>
 
-        <div class="footer-actions">
-          <button id="startBtn">Start Game</button>
-          <button id="muteBtn">Mute</button>
+        <div class="controls">
+            <button id="startBtn">Start Game</button>
+            <button id="muteBtn">Mute</button>
         </div>
-      </div>
     </main>
 
     <audio id="bgMusic" loop>
-      <source src="assets/creepy.mp3" type="audio/mpeg">
+        <source src="assets/spooky.mp3" type="audio/mpeg">
     </audio>
-  </div>
+</div>
 
-  <script src="script.js"></script>
+<script>
+const fractionPrompt = document.getElementById('fractionPrompt');
+const answerInput = document.getElementById('answerInput');
+const submitBtn = document.getElementById('submitBtn');
+const startBtn = document.getElementById('startBtn');
+const muteBtn = document.getElementById('muteBtn');
+const message = document.getElementById('message');
+const timeEl = document.getElementById('time');
+const scoreEl = document.getElementById('score');
+const player = document.getElementById('player');
+const door = document.getElementById('door');
+const monster = document.getElementById('monster');
+const bgMusic = document.getElementById('bgMusic');
+
+let currentFraction = {n:0,d:1};
+let reducedFraction = {n:0,d:1};
+let timer = null;
+let timeLeft = 20;
+let score = 0;
+let playing = false;
+
+// Utilities
+function gcd(a,b){return b===0?a:gcd(b,a%b);}
+function reduceFraction(n,d){const g=gcd(n,d); return {n:n/g,d:d/g};}
+
+// Random 4th-grade level fraction
+function randomFraction(){
+    const n=Math.floor(Math.random()*19)+2; 
+    const d=Math.floor(Math.random()*19)+2;
+    return {n,d};
+}
+
+function updatePrompt(){
+    fractionPrompt.textContent=`${currentFraction.n}/${currentFraction.d} = ?`;
+}
+
+function startTimer(){
+    clearInterval(timer);
+    timer=setInterval(()=>{
+        timeLeft--;
+        timeEl.textContent=timeLeft;
+        monster.style.left=`${-60 + (1-(timeLeft/20))*300}px`;
+        if(timeLeft<=0){
+            clearInterval(timer);
+            playing=false;
+            message.textContent="The monster caught you!";
+        }
+    },1000);
+}
+
+function newRound(){
+    currentFraction=randomFraction();
+    reducedFraction=reduceFraction(currentFraction.n,currentFraction.d);
+    updatePrompt();
+    answerInput.value='';
+    timeLeft=20;
+    timeEl.textContent=timeLeft;
+    player.style.left='10px';
+    monster.style.left='-60px';
+    door.classList.remove('door-open');
+    startTimer();
+}
+
+submitBtn.addEventListener('click',()=>{
+    if(!playing) return;
+    const ans=parseInt(answerInput.value);
+    if(ans===reducedFraction.n){
+        message.textContent="Correct! Door opens!";
+        door.classList.add('door-open');
+        score++;
+        scoreEl.textContent=score;
+        player.style.left='200px';
+        clearInterval(timer);
+        setTimeout(()=>{if(playing)newRound();},1000);
+    }else{
+        message.textContent=`Wrong! Try again.`;
+        timeLeft=Math.max(0,timeLeft-3);
+        timeEl.textContent=timeLeft;
+    }
+});
+
+startBtn.addEventListener('click',()=>{
+    playing=true;
+    score=0;
+    scoreEl.textContent=score;
+    try{bgMusic.currentTime=0;bgMusic.play();}catch(e){}
+    newRound();
+});
+
+muteBtn.addEventListener('click',()=>{
+    bgMusic.muted=!bgMusic.muted;
+    muteBtn.textContent=bgMusic.muted?'Unmute':'Mute';
+});
+</script>
 </body>
 </html>
