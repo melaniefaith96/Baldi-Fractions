@@ -128,17 +128,56 @@ let score = 0;
 let playing = false;
 let monsterSpeed = 300;
 
-// Generate random reducible 4th-grade fraction (2–20)
+// Web Audio API for spooky music
+const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+let drones = [];
+
+function playSpookyMusic(){
+    stopSpookyMusic();
+    // Low background drone
+    for(let i=0;i<3;i++){
+        const osc = audioCtx.createOscillator();
+        osc.type='sawtooth';
+        osc.frequency.value = 50 + i*20 + Math.random()*10;
+        const gain = audioCtx.createGain();
+        gain.gain.value = 0.03;
+        osc.connect(gain).connect(audioCtx.destination);
+        osc.start();
+        drones.push(osc);
+    }
+    // Random eerie beeps
+    function beep(){
+        if(!playing) return;
+        const osc = audioCtx.createOscillator();
+        osc.type='triangle';
+        osc.frequency.value = 200 + Math.random()*600;
+        const gain = audioCtx.createGain();
+        gain.gain.value = 0.05;
+        osc.connect(gain).connect(audioCtx.destination);
+        osc.start();
+        osc.stop(audioCtx.currentTime + 0.2);
+        setTimeout(beep, 800 + Math.random()*1200);
+    }
+    beep();
+}
+
+function stopSpookyMusic(){
+    drones.forEach(o=>o.stop());
+    drones=[];
+}
+
+// Fraction utilities
 function gcd(a,b){return b===0?a:gcd(b,a%b);}
 function reduceFraction(n,d){const g=gcd(n,d); return {n:n/g,d:d/g);}
 
+// Generate reducible 4th-grade fraction
 function randomFraction(){
-    let n, d, r;
-    do {
+    let n,d,r;
+    do{
         n = Math.floor(Math.random()*19)+2;
         d = Math.floor(Math.random()*19)+2;
         r = reduceFraction(n,d);
-    } while (r.n === n && r.d === d); // ensure it's reducible
+    } while(r.n===n && r.d===d);
     return {n,d};
 }
 
@@ -146,9 +185,10 @@ function updatePrompt(){
     fractionPrompt.textContent=`${currentFraction.n}/${currentFraction.d} = ?`;
 }
 
+// Timer and monster movement
 function startTimer(){
     clearInterval(timer);
-    timer=setInterval(()=>{
+    timer = setInterval(()=>{
         timeLeft--;
         timeEl.textContent=timeLeft;
         if(timeLeft<=5) timeEl.classList.add('timer-low'); else timeEl.classList.remove('timer-low');
@@ -158,6 +198,7 @@ function startTimer(){
             playing=false;
             message.textContent="The monster caught you!";
             gameOverEl.style.display='block';
+            stopSpookyMusic();
         }
     },1000);
 }
@@ -210,6 +251,8 @@ document.addEventListener('keydown', e=>{
 
 // Start button
 startBtn.addEventListener('click',()=>{
+    if(audioCtx.state === 'suspended') audioCtx.resume(); // resume for browser autoplay policies
+    playSpookyMusic();
     playing=true;
     score=0;
     scoreEl.textContent=score;
@@ -219,3 +262,4 @@ startBtn.addEventListener('click',()=>{
 </script>
 </body>
 </html>
+
