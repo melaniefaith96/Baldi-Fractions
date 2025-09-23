@@ -26,11 +26,41 @@ header {display:flex;justify-content:space-between;padding:10px;}
     border:2px solid #444;
     border-radius:8px;
 }
-#door {position:absolute;bottom:0;right:50px;width:60px;height:100px;background:brown;border:3px solid #663300;transition:transform 0.3s;}
-#player {position:absolute;bottom:0;left:10px;width:40px;height:60px;background:blue;border-radius:10px;animation:run 0.5s infinite alternate;}
-#monster {position:absolute;bottom:0;left:-50px;width:40px;height:60px;background:red;border-radius:10px;animation:monsterRun 1s infinite alternate;}
-@keyframes run {0%{bottom:0;}50%{bottom:5px;}100%{bottom:0;}}
-@keyframes monsterRun {0%{bottom:0;}50%{bottom:10px;}100%{bottom:0;}}
+#door {
+    position:absolute;
+    bottom:0;
+    right:50px;
+    width:60px;
+    height:100px;
+    background:brown;
+    border:3px solid #663300;
+    transition:transform 0.3s;
+}
+#player {
+    position:absolute;
+    bottom:0;
+    left:10px;
+    width:50px;
+    height:50px;
+    background:yellow;
+    clip-path: polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%);
+    transition:left 0.3s;
+}
+#monster {
+    position:absolute;
+    bottom:0;
+    left:-50px;
+    width:40px;
+    height:60px;
+    background:red;
+    border-radius:10px;
+    animation:monsterRun 1s infinite alternate;
+}
+@keyframes monsterRun {
+    0% {bottom:0;}
+    50% {bottom:10px;}
+    100% {bottom:0;}
+}
 .fraction-box {background:rgba(255,255,255,0.05);padding:10px;border-radius:8px;margin-bottom:10px;}
 #fractionPrompt {font-size:2rem;text-align:center;margin-bottom:10px;}
 input {width:80px;padding:5px;margin-right:10px;}
@@ -62,7 +92,7 @@ button {padding:5px 10px;cursor:pointer;}
         </div>
 
         <div class="fraction-box">
-            <div id="fractionPrompt"> ? / ? = ?</div>
+            <div id="fractionPrompt">Click Start to begin!</div>
             <input id="answerInput" type="number" placeholder="Reduced numerator">
             <button id="submitBtn">Submit</button>
             <div id="message"></div>
@@ -98,53 +128,17 @@ let score = 0;
 let playing = false;
 let monsterSpeed = 300;
 
-// Web Audio for spooky music
-const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-let oscillators = [];
-
-function playSpookyMusic(){
-    stopSpookyMusic();
-    // Create 3 low drones
-    for(let i=0;i<3;i++){
-        const osc = audioCtx.createOscillator();
-        osc.type = 'sawtooth';
-        osc.frequency.value = 50 + i*20 + Math.random()*10;
-        const gain = audioCtx.createGain();
-        gain.gain.value = 0.03;
-        osc.connect(gain).connect(audioCtx.destination);
-        osc.start();
-        oscillators.push(osc);
-    }
-    // Random eerie beeps
-    function beep(){
-        if(!playing) return;
-        const osc = audioCtx.createOscillator();
-        osc.type='triangle';
-        osc.frequency.value=200 + Math.random()*600;
-        const gain = audioCtx.createGain();
-        gain.gain.value=0.05;
-        osc.connect(gain).connect(audioCtx.destination);
-        osc.start();
-        osc.stop(audioCtx.currentTime + 0.2);
-        setTimeout(beep, 800 + Math.random()*1200);
-    }
-    beep();
-}
-
-function stopSpookyMusic(){
-    oscillators.forEach(o=>o.stop());
-    oscillators = [];
-}
-
-// Utilities
+// Generate random reducible 4th-grade fraction (2–20)
 function gcd(a,b){return b===0?a:gcd(b,a%b);}
 function reduceFraction(n,d){const g=gcd(n,d); return {n:n/g,d:d/g);}
 
-// Random fraction
 function randomFraction(){
-    let max = 10 + Math.min(score*2,10);
-    const n=Math.floor(Math.random()*max)+2;
-    const d=Math.floor(Math.random()*max)+2;
+    let n, d, r;
+    do {
+        n = Math.floor(Math.random()*19)+2;
+        d = Math.floor(Math.random()*19)+2;
+        r = reduceFraction(n,d);
+    } while (r.n === n && r.d === d); // ensure it's reducible
     return {n,d};
 }
 
@@ -152,10 +146,9 @@ function updatePrompt(){
     fractionPrompt.textContent=`${currentFraction.n}/${currentFraction.d} = ?`;
 }
 
-// Timer & monster movement
 function startTimer(){
     clearInterval(timer);
-    timer = setInterval(()=>{
+    timer=setInterval(()=>{
         timeLeft--;
         timeEl.textContent=timeLeft;
         if(timeLeft<=5) timeEl.classList.add('timer-low'); else timeEl.classList.remove('timer-low');
@@ -165,12 +158,6 @@ function startTimer(){
             playing=false;
             message.textContent="The monster caught you!";
             gameOverEl.style.display='block';
-            stopSpookyMusic();
-        }
-        // Door shake if monster close
-        if(parseInt(monster.style.left) > parseInt(door.style.right) - 70){
-            door.style.transform='translateY(-5px)';
-            setTimeout(()=>door.style.transform='translateY(0px)',100);
         }
     },1000);
 }
@@ -221,16 +208,14 @@ document.addEventListener('keydown', e=>{
     if(e.key==='ArrowLeft') player.style.left = Math.max(left-20, 0)+'px';
 });
 
+// Start button
 startBtn.addEventListener('click',()=>{
-    if(audioCtx.state === 'suspended') audioCtx.resume();
-    playSpookyMusic();
-    gameOverEl.style.display='none';
     playing=true;
     score=0;
     scoreEl.textContent=score;
+    gameOverEl.style.display='none';
     newRound();
 });
 </script>
 </body>
 </html>
-
