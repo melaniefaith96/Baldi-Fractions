@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Reduce & Run — Basement Escape</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div id="game">
+    <header>
+      <h1>Reduce & Run</h1>
+      <div class="hud">
+        <div id="timer">Time: <span id="time">30</span>s</div>
+        <div id="score">Score: 0</div>
+      </div>
+    </header>
+
+    <main>
+      <div class="left-panel">
+        <div class="scene">
+          <img id="door" src="assets/door-closed.png" alt="door" />
+          <img id="teacher" src="assets/teacher.png" alt="teacher monster" />
+          <div id="player-flash"></div>
+        </div>
+      </div>
+
+      <div class="right-panel">
+        <div class="description">
+          <p class="blurb">A teacher-monster is chasing you in a dark basement. Reduce the fraction correctly before the time runs out and the door opens — hurry!</p>
+        </div>
+
+        <div class="fraction-box" aria-live="polite">
+          <div id="fractionPrompt" class="fractionPrompt"> ? / ? </div>
+
+          <div class="input-row">
+            <input id="numInput" inputmode="numeric" pattern="[0-9]*" type="text" placeholder="numerator" />
+            <span class="slash">/</span>
+            <input id="denInput" inputmode="numeric" pattern="[0-9]*" type="text" placeholder="denominator" />
+          </div>
+
+          <div class="controls">
+            <button id="submitBtn">Submit</button>
+            <button id="skipBtn">Skip (-5s)</button>
+            <button id="hintBtn">Hint (-3s)</button>
+          </div>
+
+          <div id="message" class="message"></div>
+        </div>
+
+        <div class="footer-actions">
+          <button id="startBtn">Start Game</button>
+          <button id="muteBtn">Mute</button>
+        </div>
+      </div>
+    </main>
+
+    <audio id="bgMusic" loop>
+      <source src="assets/creepy.mp3" type="audio/mpeg">
+    </audio>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>
