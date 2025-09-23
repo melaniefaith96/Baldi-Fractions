@@ -26,46 +26,11 @@ header {display:flex;justify-content:space-between;padding:10px;}
     border:2px solid #444;
     border-radius:8px;
 }
-#door {
-    position:absolute;
-    bottom:0;
-    right:50px;
-    width:60px;
-    height:100px;
-    background:brown;
-    border:3px solid #663300;
-    transition:transform 0.3s;
-}
-#player {
-    position:absolute;
-    bottom:0;
-    left:10px;
-    width:40px;
-    height:60px;
-    background:blue;
-    border-radius:10px;
-    animation:run 0.5s infinite alternate;
-}
-#monster {
-    position:absolute;
-    bottom:0;
-    left:-50px;
-    width:40px;
-    height:60px;
-    background:red;
-    border-radius:10px;
-    animation:monsterRun 1s infinite alternate;
-}
-@keyframes run {
-    0% {bottom:0;}
-    50% {bottom:5px;}
-    100% {bottom:0;}
-}
-@keyframes monsterRun {
-    0% {bottom:0;}
-    50% {bottom:10px;}
-    100% {bottom:0;}
-}
+#door {position:absolute;bottom:0;right:50px;width:60px;height:100px;background:brown;border:3px solid #663300;transition:transform 0.3s;}
+#player {position:absolute;bottom:0;left:10px;width:40px;height:60px;background:blue;border-radius:10px;animation:run 0.5s infinite alternate;}
+#monster {position:absolute;bottom:0;left:-50px;width:40px;height:60px;background:red;border-radius:10px;animation:monsterRun 1s infinite alternate;}
+@keyframes run {0%{bottom:0;}50%{bottom:5px;}100%{bottom:0;}}
+@keyframes monsterRun {0%{bottom:0;}50%{bottom:10px;}100%{bottom:0;}}
 .fraction-box {background:rgba(255,255,255,0.05);padding:10px;border-radius:8px;margin-bottom:10px;}
 #fractionPrompt {font-size:2rem;text-align:center;margin-bottom:10px;}
 input {width:80px;padding:5px;margin-right:10px;}
@@ -112,7 +77,7 @@ button {padding:5px 10px;cursor:pointer;}
 </div>
 
 <script>
-// Game elements
+// Game variables
 const fractionPrompt = document.getElementById('fractionPrompt');
 const answerInput = document.getElementById('answerInput');
 const submitBtn = document.getElementById('submitBtn');
@@ -133,33 +98,51 @@ let score = 0;
 let playing = false;
 let monsterSpeed = 300;
 
-// Web Audio for spooky background
+// Web Audio for spooky music
 const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-let oscillator = null;
+let oscillators = [];
 
-function playSpookySound() {
-    if(oscillator) oscillator.stop();
-    oscillator = audioCtx.createOscillator();
-    oscillator.type = 'sawtooth';
-    oscillator.frequency.setValueAtTime(110, audioCtx.currentTime);
-    const gainNode = audioCtx.createGain();
-    gainNode.gain.value = 0.02;
-    oscillator.connect(gainNode).connect(audioCtx.destination);
-    oscillator.start();
+function playSpookyMusic(){
+    stopSpookyMusic();
+    // Create 3 low drones
+    for(let i=0;i<3;i++){
+        const osc = audioCtx.createOscillator();
+        osc.type = 'sawtooth';
+        osc.frequency.value = 50 + i*20 + Math.random()*10;
+        const gain = audioCtx.createGain();
+        gain.gain.value = 0.03;
+        osc.connect(gain).connect(audioCtx.destination);
+        osc.start();
+        oscillators.push(osc);
+    }
+    // Random eerie beeps
+    function beep(){
+        if(!playing) return;
+        const osc = audioCtx.createOscillator();
+        osc.type='triangle';
+        osc.frequency.value=200 + Math.random()*600;
+        const gain = audioCtx.createGain();
+        gain.gain.value=0.05;
+        osc.connect(gain).connect(audioCtx.destination);
+        osc.start();
+        osc.stop(audioCtx.currentTime + 0.2);
+        setTimeout(beep, 800 + Math.random()*1200);
+    }
+    beep();
 }
 
-function stopSpookySound() {
-    if(oscillator) oscillator.stop();
-    oscillator = null;
+function stopSpookyMusic(){
+    oscillators.forEach(o=>o.stop());
+    oscillators = [];
 }
 
 // Utilities
 function gcd(a,b){return b===0?a:gcd(b,a%b);}
-function reduceFraction(n,d){const g=gcd(n,d); return {n:n/g,d:d/g};}
+function reduceFraction(n,d){const g=gcd(n,d); return {n:n/g,d:d/g);}
 
-// Random fraction, difficulty scales
+// Random fraction
 function randomFraction(){
-    let max = 10 + Math.min(score*2, 10);
+    let max = 10 + Math.min(score*2,10);
     const n=Math.floor(Math.random()*max)+2;
     const d=Math.floor(Math.random()*max)+2;
     return {n,d};
@@ -169,10 +152,10 @@ function updatePrompt(){
     fractionPrompt.textContent=`${currentFraction.n}/${currentFraction.d} = ?`;
 }
 
-// Timer with monster movement
+// Timer & monster movement
 function startTimer(){
     clearInterval(timer);
-    timer=setInterval(()=>{
+    timer = setInterval(()=>{
         timeLeft--;
         timeEl.textContent=timeLeft;
         if(timeLeft<=5) timeEl.classList.add('timer-low'); else timeEl.classList.remove('timer-low');
@@ -181,10 +164,10 @@ function startTimer(){
             clearInterval(timer);
             playing=false;
             message.textContent="The monster caught you!";
-            gameOverEl.style.display = 'block';
-            stopSpookySound();
+            gameOverEl.style.display='block';
+            stopSpookyMusic();
         }
-        // Door shakes if monster very close
+        // Door shake if monster close
         if(parseInt(monster.style.left) > parseInt(door.style.right) - 70){
             door.style.transform='translateY(-5px)';
             setTimeout(()=>door.style.transform='translateY(0px)',100);
@@ -207,7 +190,7 @@ function newRound(){
     startTimer();
 }
 
-// Handle submit
+// Submit handler
 submitBtn.addEventListener('click',()=>{
     if(!playing) return;
     const ans=parseInt(answerInput.value);
@@ -239,8 +222,8 @@ document.addEventListener('keydown', e=>{
 });
 
 startBtn.addEventListener('click',()=>{
-    if(audioCtx.state === 'suspended') audioCtx.resume(); // allow audio in browsers
-    playSpookySound();
+    if(audioCtx.state === 'suspended') audioCtx.resume();
+    playSpookyMusic();
     gameOverEl.style.display='none';
     playing=true;
     score=0;
@@ -250,3 +233,4 @@ startBtn.addEventListener('click',()=>{
 </script>
 </body>
 </html>
+
