@@ -63,7 +63,7 @@ header {display:flex;justify-content:space-between;padding:10px;}
 }
 .fraction-box {background:rgba(255,255,255,0.05);padding:10px;border-radius:8px;margin-bottom:10px;}
 #fractionPrompt {font-size:2rem;text-align:center;margin-bottom:10px;}
-input {width:80px;padding:5px;margin-right:10px;}
+input {width:80px;padding:5px;margin:5px;}
 button {padding:5px 10px;cursor:pointer;}
 #message {margin-top:8px;text-align:center;color:#ff6b6b;}
 .controls {margin-top:10px;display:flex;gap:10px;justify-content:center;}
@@ -93,7 +93,8 @@ button {padding:5px 10px;cursor:pointer;}
 
         <div class="fraction-box">
             <div id="fractionPrompt">Click Start to begin!</div>
-            <input id="answerInput" type="number" placeholder="Reduced numerator">
+            <input id="numeratorInput" type="number" placeholder="Reduced numerator">
+            <input id="denominatorInput" type="number" placeholder="Reduced denominator">
             <button id="submitBtn">Submit</button>
             <div id="message"></div>
         </div>
@@ -107,9 +108,10 @@ button {padding:5px 10px;cursor:pointer;}
 </div>
 
 <script>
-// Game variables
+// DOM Elements
 const fractionPrompt = document.getElementById('fractionPrompt');
-const answerInput = document.getElementById('answerInput');
+const numeratorInput = document.getElementById('numeratorInput');
+const denominatorInput = document.getElementById('denominatorInput');
 const submitBtn = document.getElementById('submitBtn');
 const startBtn = document.getElementById('startBtn');
 const message = document.getElementById('message');
@@ -120,146 +122,160 @@ const door = document.getElementById('door');
 const monster = document.getElementById('monster');
 const gameOverEl = document.getElementById('gameOver');
 
-let currentFraction = {n:0,d:1};
-let reducedFraction = {n:0,d:1};
+let currentFraction = {n: 0, d: 1};
+let reducedFraction = {n: 0, d: 1};
 let timer = null;
 let timeLeft = 20;
 let score = 0;
 let playing = false;
 let monsterSpeed = 300;
 
-// Web Audio API for spooky music
+// Web Audio API
 const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 let drones = [];
 
-function playSpookyMusic(){
+function playSpookyMusic() {
     stopSpookyMusic();
-    // Low background drone
-    for(let i=0;i<3;i++){
+    for (let i = 0; i < 3; i++) {
         const osc = audioCtx.createOscillator();
-        osc.type='sawtooth';
-        osc.frequency.value = 50 + i*20 + Math.random()*10;
+        osc.type = 'sawtooth';
+        osc.frequency.value = 50 + i * 20 + Math.random() * 10;
         const gain = audioCtx.createGain();
         gain.gain.value = 0.03;
         osc.connect(gain).connect(audioCtx.destination);
         osc.start();
         drones.push(osc);
     }
-    // Random eerie beeps
-    function beep(){
-        if(!playing) return;
+
+    function beep() {
+        if (!playing) return;
         const osc = audioCtx.createOscillator();
-        osc.type='triangle';
-        osc.frequency.value = 200 + Math.random()*600;
+        osc.type = 'triangle';
+        osc.frequency.value = 200 + Math.random() * 600;
         const gain = audioCtx.createGain();
         gain.gain.value = 0.05;
         osc.connect(gain).connect(audioCtx.destination);
         osc.start();
         osc.stop(audioCtx.currentTime + 0.2);
-        setTimeout(beep, 800 + Math.random()*1200);
+        setTimeout(beep, 800 + Math.random() * 1200);
     }
     beep();
 }
 
-function stopSpookyMusic(){
-    drones.forEach(o=>o.stop());
-    drones=[];
+function stopSpookyMusic() {
+    drones.forEach(o => o.stop());
+    drones = [];
 }
 
-// Fraction utilities
-function gcd(a,b){return b===0?a:gcd(b,a%b);}
-function reduceFraction(n,d){const g=gcd(n,d); return {n:n/g,d:d/g);}
-
-// Generate reducible 4th-grade fraction
-function randomFraction(){
-    let n,d,r;
-    do{
-        n = Math.floor(Math.random()*19)+2;
-        d = Math.floor(Math.random()*19)+2;
-        r = reduceFraction(n,d);
-    } while(r.n===n && r.d===d);
-    return {n,d};
+// Utilities
+function gcd(a, b) {
+    return b === 0 ? a : gcd(b, a % b);
 }
 
-function updatePrompt(){
-    fractionPrompt.textContent=`${currentFraction.n}/${currentFraction.d} = ?`;
+function reduceFraction(n, d) {
+    const g = gcd(n, d);
+    return { n: n / g, d: d / g };
 }
 
-// Timer and monster movement
-function startTimer(){
+function randomFraction() {
+    let n, d, r;
+    do {
+        n = Math.floor(Math.random() * 19) + 2;
+        d = Math.floor(Math.random() * 19) + 2;
+        r = reduceFraction(n, d);
+    } while (r.n === n && r.d === d); // ensure it's reducible
+    return { n, d };
+}
+
+function updatePrompt() {
+    fractionPrompt.textContent = `Reduce: ${currentFraction.n}/${currentFraction.d}`;
+}
+
+// Timer
+function startTimer() {
     clearInterval(timer);
-    timer = setInterval(()=>{
+    timer = setInterval(() => {
         timeLeft--;
-        timeEl.textContent=timeLeft;
-        if(timeLeft<=5) timeEl.classList.add('timer-low'); else timeEl.classList.remove('timer-low');
-        monster.style.left=`${-50 + (1-(timeLeft/20))*monsterSpeed}px`;
-        if(timeLeft<=0){
+        timeEl.textContent = timeLeft;
+        if (timeLeft <= 5) timeEl.classList.add('timer-low');
+        else timeEl.classList.remove('timer-low');
+
+        let monsterPos = -50 + ((20 - timeLeft) / 20) * monsterSpeed;
+        monster.style.left = `${monsterPos}px`;
+
+        if (timeLeft <= 0) {
             clearInterval(timer);
-            playing=false;
-            message.textContent="The monster caught you!";
-            gameOverEl.style.display='block';
+            playing = false;
+            message.textContent = "The monster caught you!";
+            gameOverEl.style.display = 'block';
             stopSpookyMusic();
         }
-    },1000);
+    }, 1000);
 }
 
-function newRound(){
-    currentFraction=randomFraction();
-    reducedFraction=reduceFraction(currentFraction.n,currentFraction.d);
+// Game Logic
+function newRound() {
+    currentFraction = randomFraction();
+    reducedFraction = reduceFraction(currentFraction.n, currentFraction.d);
     updatePrompt();
-    answerInput.value='';
-    timeLeft=20;
-    timeEl.textContent=timeLeft;
-    player.style.left='10px';
-    monster.style.left='-50px';
-    monsterSpeed = 300 + score*10;
+    numeratorInput.value = '';
+    denominatorInput.value = '';
+    numeratorInput.focus();
+    timeLeft = 20;
+    timeEl.textContent = timeLeft;
+    player.style.left = '10px';
+    monster.style.left = '-50px';
+    monsterSpeed = 300 + score * 10;
     door.classList.remove('door-open');
-    message.textContent='';
+    message.textContent = '';
     startTimer();
 }
 
-// Submit handler
-submitBtn.addEventListener('click',()=>{
-    if(!playing) return;
-    const ans=parseInt(answerInput.value);
-    if(ans===reducedFraction.n){
-        message.textContent="Correct! Door opens!";
+submitBtn.addEventListener('click', () => {
+    if (!playing) return;
+
+    const userNum = parseInt(numeratorInput.value);
+    const userDen = parseInt(denominatorInput.value);
+
+    if (userNum === reducedFraction.n && userDen === reducedFraction.d) {
+        message.textContent = "Correct! Door opens!";
         fractionPrompt.classList.add('correct-flash');
-        setTimeout(()=>fractionPrompt.classList.remove('correct-flash'),500);
+        setTimeout(() => fractionPrompt.classList.remove('correct-flash'), 500);
         door.classList.add('door-open');
         score++;
-        scoreEl.textContent=score;
-        player.style.left='200px';
+        scoreEl.textContent = score;
+        player.style.left = '200px';
         clearInterval(timer);
-        setTimeout(()=>{if(playing)newRound();},800);
-    }else{
-        message.textContent=`Wrong! Try again.`;
+        setTimeout(() => { if (playing) newRound(); }, 800);
+    } else {
+        message.textContent = "Wrong! Try again.";
         fractionPrompt.classList.add('wrong-flash');
-        setTimeout(()=>fractionPrompt.classList.remove('wrong-flash'),500);
-        timeLeft=Math.max(0,timeLeft-3);
-        timeEl.textContent=timeLeft;
+        setTimeout(() => fractionPrompt.classList.remove('wrong-flash'), 500);
+        timeLeft = Math.max(0, timeLeft - 3);
+        timeEl.textContent = timeLeft;
     }
 });
 
-// Keyboard movement
-document.addEventListener('keydown', e=>{
-    if(!playing) return;
+// Player movement (optional)
+document.addEventListener('keydown', e => {
+    if (!playing) return;
     let left = parseInt(player.style.left);
-    if(e.key==='ArrowRight') player.style.left = Math.min(left+20, 250)+'px';
-    if(e.key==='ArrowLeft') player.style.left = Math.max(left-20, 0)+'px';
+    if (e.key === 'ArrowRight') player.style.left = Math.min(left + 20, 250) + 'px';
+    if (e.key === 'ArrowLeft') player.style.left = Math.max(left - 20, 0) + 'px';
 });
 
-// Start button
-startBtn.addEventListener('click',()=>{
-    if(audioCtx.state === 'suspended') audioCtx.resume(); // resume for browser autoplay policies
+// Start game
+startBtn.addEventListener('click', () => {
+    if (audioCtx.state === 'suspended') audioCtx.resume(); // Resume audio context
     playSpookyMusic();
-    playing=true;
-    score=0;
-    scoreEl.textContent=score;
-    gameOverEl.style.display='none';
+    playing = true;
+    score = 0;
+    scoreEl.textContent = score;
+    gameOverEl.style.display = 'none';
     newRound();
 });
 </script>
 </body>
 </html>
+
 
